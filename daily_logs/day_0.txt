@@ -1,0 +1,19 @@
+Hi i am Tanez.
+
+This is an attendence tracker project about Albion Online.
+I am doing this because tracking attendence is a chore in Albion and i see the spark. It can be automated.
+
+In short term i want this project to be functional semi-automatic.
+In the long term it can be fully automated it can even made into a discord bot.
+
+Currently i have some basic developer skills like:
+- read docs
+- learning a new coding language
+- Creating algorithms from scratch
+- C, C++, C#, and a little bit of javascript
+
+My current weak spots are
+- Time management
+- Sleep Schedule
+
+Starting today i want to build a momentum. I am starting with 3 hour a day and in the long term i want to go as far as 8-9 hours a day of pure work and no distractions.
