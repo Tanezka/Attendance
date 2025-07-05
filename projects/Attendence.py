@@ -1,8 +1,12 @@
 import tkinter as tk
 from datetime import datetime
+import csv
+import os
 from PIL import Image, ImageEnhance, ImageFilter
 from tkinter import filedialog
 import pytesseract
+
+CSV_FILE = "player_log.csv"
 
 class myWindow:
 	def __init__(self):
@@ -11,6 +15,8 @@ class myWindow:
 		self.window.geometry("600x400")
 		self.window.title("Attendance")
 
+		# Variables
+		self.pairs = []
 		# Frame Setup
 		self.frame1 = tk.Frame(self.window, bg="lightblue")	
 		self.frame1.pack(side="left", fill="y", expand=False)
@@ -36,9 +42,10 @@ class myWindow:
 		input_white_flag_box.grid(row=5, column=0, padx=10)
 
 		# Button
-		button = tk.Button(self.frame1, text="Yoklama al", command=lambda: calculateAttendance(input_box.get("1.0", "end"), input_utc_box.get(), input_white_flag_box.get("1.0", "end")))
+		button = tk.Button(self.frame1, text="Yoklama al", command=lambda: calculateAttendance(input_box.get("1.0", "end"), input_utc_box.get(), input_white_flag_box.get("1.0", "end"), self.pairs))
 		button.grid(row=6, column=0, padx=10, pady=10)
-
+		log_button = tk.Button(self.frame1, text="Yoklamayı Kaydet", command=lambda: update_attendance_log(self.pairs, self))
+		log_button.grid(row=7, column=0, padx=10, pady=10)
 		# Button Setup
 		# self.button = tk.Button(self.frame1, text="Troll But", command=lambda: self.makeNewWindow())
 		# self.button.grid(row=5, column=0, sticky = "n")
@@ -51,20 +58,20 @@ class myWindow:
 		self.result_text = tk.Text(self.col2, height=10, width=25)
 		self.result_text.grid(row=1, column=0, padx=10, pady=10)
 
-	def	makeNewWindow(self):
+	def	makeNewWindow(mainWindow):
 		tempWindow = newWindow()
+		tempWindow.countDown(mainWindow, 3)
 
-def calculateAttendance(list, time, white_flag_list):
+def calculateAttendance(list, time, white_flag_list, pairs):
 	if list.strip() == "" or time.strip() == "" or white_flag_list.strip() == "":
 		print("Input is empty")
 		return
+	pairs.clear()
+	TestWindow.result_text.delete("1.0", tk.END)
 	dt2 = datetime.strptime(time, '%m/%d/%Y %H:%M')
 	forscience = list.split('\n')
 	forscience = forscience[1:]
-	pairs = []
 	contenders = white_flag_list.lower().replace(' ', '').replace('0', 'o').split()
-	for line in contenders:
-		print(f"{line} is contender\n")
 	for line in forscience:
 		if line.strip() == "":
 			continue
@@ -77,7 +84,7 @@ def calculateAttendance(list, time, white_flag_list):
 		diff = dt2 - dt1
 		diff_minutes = int(diff.total_seconds() / 60)
 		if diff_minutes < 60 and diff_minutes > 0:
-			pairs.append([parts[0], diff_minutes])
+			pairs.append([parts[0], int(diff_minutes)])
 	
 	for element in pairs:
 		# print(f"{element[0]} is dodging with {element[1]} mins\n")
@@ -97,26 +104,80 @@ def open_file_dialog():
 		img.show()
 		test1 = pytesseract.image_to_string(img)
 		print("Extracted text:", test1)
-        
+
+def update_attendance_log(pairs, mainWindow):
+	if not pairs:
+		return
+	print("Updating attendance log...")
+	for player, status in pairs:
+		print(f"Player: {player}, Status: {status}")
+		update_player_log(player, status)
+	
+	# makeNewWindow = myWindow.makeNewWindow(mainWindow)
+
+
+def load_player_log():
+	player_log = {}
+	if os.path.exists(CSV_FILE):
+		with open(CSV_FILE, mode='r', newline="", encoding="utf-8") as file:
+			reader = csv.DictReader(file)
+			for row in reader:
+				player_log[row["player_name"]] = {
+					"dodge_count": int(row["dodge_count"]),
+					"skip_count": int(row["skip_count"]),
+					"avarage_dodge_time": int(row["avarage_dodge_time"])
+				}
+	return player_log
+
+def save_player_log(player_log):
+	with open(CSV_FILE, mode='w', newline="", encoding="utf-8") as file:
+		fnames = ["player_name", "dodge_count", "skip_count", "avarage_dodge_time"]
+		writer = csv.DictWriter(file, fieldnames = fnames)
+		writer.writeheader()
+		for player_name, data in player_log.items():
+			writer.writerow({
+				"player_name": player_name,
+				"dodge_count": data["dodge_count"],
+				"skip_count": data["skip_count"],
+				"avarage_dodge_time": data["avarage_dodge_time"]
+			})
+
+def update_player_log(player_name, status):
+	log = load_player_log()
+
+	if player_name not in log:
+		log[player_name] = {
+			"dodge_count": 0,
+			"skip_count": 0,
+			"avarage_dodge_time": 0
+		}
+	if status == "Online":
+		log[player_name]["skip_count"] += 1
+	
+	else:
+		log[player_name]["dodge_count"] += 1
+		log[player_name]["avarage_dodge_time"] = int((log[player_name]["avarage_dodge_time"] * log[player_name]["dodge_count"] + int(status)) / (log[player_name]["dodge_count"]))
+	
+	save_player_log(log)
 
 class newWindow:
 	def	__init__(self):
 		self.window = tk.Toplevel()
-		self.window.geometry("500x300")
+		self.window.geometry("300x100")
 		self.text = tk.StringVar()
-		self.text.set("Hi")	
+		self.text.set("Kayıt başarı ile tutuldu. Pencere 3 saniye içinde kapanacaktır.")	
 		self.myLabel = tk.Label(self.window, textvariable=self.text)
 		self.myLabel.pack()
 		self.window.title("TestWindow")
-		self.exitButton = tk.Button(self.window, text="Close", command=lambda: self.countDown(3))
-		self.exitButton.pack()
+		# self.exitButton = tk.Button(self.window, text="Close", command=lambda: self.countDown(3))
+		# self.exitButton.pack()
 
-	def countDown(self, count):
+	def countDown(self, window, count):
 		if count > 0:
-			self.text.set(f"Window will close in {count}")
-			self.myLabel.after(1000, self.countDown, count - 1)
+			self.myLabel.after(1000, self.countDown, window, count - 1)
 		else:
 			self.window.destroy()
+			window.window.destroy()
 
 
 TestWindow = myWindow()
